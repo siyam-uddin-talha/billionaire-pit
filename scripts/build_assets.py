@@ -1,9 +1,11 @@
 """Original low-poly fighters, shared skinned rig, clips, arena and trophy. Blender 4.5+."""
-import bpy, math, os, json
+import bpy, math, os, json, sys
 from mathutils import Vector, Matrix
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT,'public','models')
 os.makedirs(OUT, exist_ok=True)
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from build_head import build_head
 
 def reset():
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
@@ -82,41 +84,9 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
     tm=bpy.data.meshes.new('Continuous anatomical torso');tm.from_pydata(torso_vertices,[],torso_faces);tm.update();to=bpy.data.objects.new('Torso',tm);bpy.context.collection.objects.link(to);to.data.materials.append(skin)
     for poly in tm.polygons:poly.use_smooth=True
     to.vertex_groups.new(name='chest').add(list(range(len(torso_vertices))),1,'REPLACE')
-    # Projection-mapped, curved, textured heads: each uses its own atlas quadrant.
-    uv('Neck',(0,.015,1.725),(.083,.085,.105),skin,'head',32)
-    uv('Anatomical skull',(0,.028,1.949),(.130*headscale,.108,.177),skin,'head',40)
-    uv('Hair back',(0,.054,2.027),(.132,.108,.108),hair,'head',32)
-    uv('Fitted hair cap',(0,.013,2.068),(.132,.117,.068),hair,'head',32)
-    face_material=bpy.data.materials.new('Facial likeness texture');face_material.use_nodes=True
-    shader=face_material.node_tree.nodes.get('Principled BSDF');shader.inputs['Roughness'].default_value=.83
-    shader.inputs['Specular IOR Level'].default_value=.12
-    texture_node=face_material.node_tree.nodes.new('ShaderNodeTexImage');texture_node.image=bpy.data.images.load(os.path.join(OUT,'fighter-face-atlas.png'),check_existing=True)
-    uv_node=face_material.node_tree.nodes.new('ShaderNodeUVMap');uv_node.uv_map='Face atlas UV';face_material.node_tree.links.new(uv_node.outputs['UV'],texture_node.inputs['Vector'])
-    face_material.node_tree.links.new(texture_node.outputs['Color'],shader.inputs['Base Color'])
-    face_material.node_tree.links.new(texture_node.outputs['Alpha'],shader.inputs['Alpha'])
-    face_material.node_tree.links.new(texture_node.outputs['Color'],shader.inputs['Emission Color']);shader.inputs['Emission Strength'].default_value=.10
-    face_material.surface_render_method='DITHERED';face_material.use_backface_culling=True
-    fid_index=[item[0] for item in ROSTER].index(fid);col=fid_index%2;row=fid_index//2
-    vertices=[];polygons=[];uvs=[];nx=48;ny=56
-    for j in range(ny+1):
-        v=j/ny
-        for i in range(nx+1):
-            u=i/nx;x=(u-.5)*.397;z=1.735+v*.43
-            side=max(0,1-((u-.5)/.39)**2)**.5
-            vertical=.78+.22*math.sin(v*math.pi)
-            nose=.035*math.exp(-((u-.5)/.063)**2-((v-.425)/.10)**2)
-            y=-.025-.125*side*vertical-nose
-            vertices.append((x,y,z));uvs.append(((col+u)/2,(1-row+v)/2))
-    for j in range(ny):
-        for i in range(nx):
-            a=j*(nx+1)+i;polygons.append((a,a+1,a+nx+2,a+nx+1))
-    mesh=bpy.data.meshes.new('Projected facial surface');mesh.from_pydata(vertices,[],polygons);mesh.update()
-    face=bpy.data.objects.new('Recognizable textured face',mesh);bpy.context.collection.objects.link(face);face.data.materials.append(face_material)
-    layer=mesh.uv_layers.new(name='Face atlas UV')
-    for poly in mesh.polygons:
-        poly.use_smooth=True
-        for loop in poly.loop_indices:layer.data[loop].uv=uvs[mesh.loops[loop].vertex_index]
-    face.vertex_groups.new(name='head').add(list(range(len(vertices))),1,'REPLACE')
+    # One fitted surface from chin to crown; no separate skull behind a face card.
+    uv('Neck',(0,.021,1.725),(.069,.073,.105),skin,'head',32)
+    build_head(fid, os.path.join(OUT,'fighter-face-atlas.png'), skin)
     box('Fight shorts',(0,.005,1.005),(.54*width,.35,.28),black,'pelvis',.055)
     box('Waistband',(0,-.004,1.14),(.55*width,.36,.055),accent,'pelvis',.015)
     box('Belt clasp',(0,-.193,1.13),(.07,.018,.045),metal,'pelvis',.008)
@@ -140,6 +110,12 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
     bpy.ops.object.select_all(action='DESELECT')
     for o in meshes:o.select_set(True)
     bpy.context.view_layer.objects.active=meshes[0];bpy.ops.object.join();body=bpy.context.object;body.name=fid+'_body'
+    # Joined body loops need white albedo because glTF multiplies vertex color
+    # into every primitive; only the fitted scalp uses sampled vertex colors.
+    albedo=body.data.color_attributes.get('Head albedo')
+    for poly in body.data.polygons:
+        if 'continuous scalp and jaw' not in body.data.materials[poly.material_index].name:
+            for loop in poly.loop_indices:albedo.data[loop].color=(1,1,1,1)
     mod=body.modifiers.new('Shared fighter rig','ARMATURE');mod.object=rig;body.parent=rig
     for b in rig.pose.bones:b.rotation_mode='XYZ'
     def clip(name, duration, poses, loop=False):

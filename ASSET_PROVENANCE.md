@@ -14,4 +14,6 @@ Original synthetic audio was created with `scripts/build_audio.py`. It contains 
 
 `scripts/build_lower_body.py` creates tapered thigh/knee/calf/ankle surfaces with blended leg weights and fitted shorts with a continuous hip panel. The export applies the same adult-proportion mapping to mesh vertices, skeleton rest positions and strike targets, keeping total height approximately constant while lengthening legs and reducing head, shoulder, glove and boot bulk.
 
+Arm geometry uses a single curved shoulder-to-wrist surface without spherical joint caps. The wrist cuffs follow the forearm direction. The neck is shortened by 3.5 model centimeters with the same mapping applied to the mesh and skeleton. Each waistband and the upper shorts use the shared `torso_section` profile and that fighter's width, keeping the waist aligned with the abdomen.
+
 This is a fictional satirical depiction. No affiliation or endorsement is implied. Commercial likeness review is not part of this implementation.

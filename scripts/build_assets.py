@@ -70,7 +70,11 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
         uv('MMA glove',(sgn*.515,-.405,1.531),(.083,.083,.102),black,f'hand.{s}')
         box('Glove knuckles',(sgn*.51,-.465,1.55),(.130,.046,.068),accent,f'hand.{s}',.026)
         uv('Thumb',(sgn*.455,-.42,1.51),(.032,.045,.055),black,f'hand.{s}')
-        box('Wrist wrap',(sgn*.525,-.336,1.449),(.126,.114,.052),accent,f'forearm.{s}',.013)
+        wrist=Vector(joints[f'forearm.{s}'][1]);axis=(wrist-Vector(joints[f'forearm.{s}'][0])).normalized()
+        bpy.ops.mesh.primitive_cylinder_add(vertices=32,radius=.052,depth=.036,location=wrist-axis*.030)
+        cuff=bpy.context.object;cuff.name='Fitted wrist cuff';cuff.rotation_mode='QUATERNION';cuff.rotation_quaternion=Vector((0,0,1)).rotation_difference(axis)
+        cuff.data.materials.append(accent);cuff.vertex_groups.new(name=f'forearm.{s}').add(list(range(len(cuff.data.vertices))),1,'REPLACE')
+        for poly in cuff.data.polygons:poly.use_smooth=len(poly.vertices)==4
         box('Boot',(sgn*.27,-.075,.074),(.162,.295,.12),black,f'foot.{s}',.045)
         box('Boot sole',(sgn*.27,-.08,.022),(.166,.30,.024),accent,f'foot.{s}',.008)
         box('Boot seam',(sgn*.27,-.215,.065),(.10,.015,.026),glow,f'foot.{s}',.005)
@@ -90,6 +94,8 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
         x,y,z=p
         sx=.78+(.84-.78)*max(0,min(1,(z-1.65)/.115))
         nz=z*1.10 if z<=1.14 else (1.254+(z-1.14)*.93 if z<=1.765 else 1.83525+(z-1.765)*.82)
+        neck_t=max(0,min(1,(z-1.63)/.14))
+        nz-=.035*neck_t*neck_t*(3-2*neck_t)
         return Vector((x*sx,y*.90,nz))
     for vertex in body.data.vertices:vertex.co=proportion(vertex.co)
     bpy.context.view_layer.objects.active=rig;bpy.ops.object.mode_set(mode='EDIT')

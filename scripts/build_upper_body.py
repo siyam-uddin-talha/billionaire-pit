@@ -6,26 +6,28 @@ def smooth(a,b,x):
     t=max(0,min(1,(x-a)/(b-a)))
     return t*t*(3-2*t)
 
-def build_upper_body(skin,width,joints):
-    parts=[]
-    # Cross sections continue through the collar into the neck under the jaw.
+def torso_section(z,width):
     profile=[(1.08,.225,.137,0),(1.22,.242,.148,0),(1.39,.281,.164,.008),
              (1.51,.319,.163,.014),(1.58,.322,.135,.022),
              (1.63,.210,.102,.027),(1.68,.100,.079,.029),
              (1.73,.073,.072,.030),(1.79,.070,.072,.027),(1.835,.082,.075,.023)]
+    k=next((k for k in range(len(profile)-1) if z<=profile[k+1][0]),len(profile)-2)
+    a,b=profile[k],profile[k+1];dz=b[0]-a[0];t=(z-a[0])/dz
+    before=profile[max(0,k-1)];after=profile[min(len(profile)-1,k+2)]
+    def interpolate(c):
+        m0=(b[c]-before[c])/(b[0]-before[0]);m1=(after[c]-a[c])/(after[0]-a[0])
+        return (2*t**3-3*t*t+1)*a[c]+(t**3-2*t*t+t)*dz*m0+(-2*t**3+3*t*t)*b[c]+(t**3-t*t)*dz*m1
+    rx,ry,cy=[interpolate(c) for c in (1,2,3)]
+    rx*=1+(width-1)*(1-smooth(1.57,1.73,z))
+    return rx,ry,cy
+
+def build_upper_body(skin,width,joints):
+    parts=[]
+    # Cross sections continue through the collar into the neck under the jaw.
     verts=[];faces=[];n=64;rows=80
     for j in range(rows+1):
         z=1.08+(1.835-1.08)*j/rows
-        k=next((k for k in range(len(profile)-1) if z<=profile[k+1][0]),len(profile)-2)
-        a,b=profile[k],profile[k+1];dz=b[0]-a[0];t=(z-a[0])/dz
-        before=profile[max(0,k-1)];after=profile[min(len(profile)-1,k+2)]
-        # Shared tangents avoid horizontal ridges at chest cross-section boundaries.
-        def interpolate(component):
-            m0=(b[component]-before[component])/(b[0]-before[0])
-            m1=(after[component]-a[component])/(after[0]-a[0])
-            return (2*t**3-3*t*t+1)*a[component]+(t**3-2*t*t+t)*dz*m0+(-2*t**3+3*t*t)*b[component]+(t**3-t*t)*dz*m1
-        rx,ry,cy=[interpolate(component) for component in (1,2,3)]
-        rx*=1+(width-1)*(1-smooth(1.57,1.73,z))
+        rx,ry,cy=torso_section(z,width)
         for i in range(n):
             theta=2*math.pi*i/n;x=rx*math.cos(theta);y=cy+ry*math.sin(theta)
             if math.sin(theta)<0:
@@ -49,26 +51,33 @@ def build_upper_body(skin,width,joints):
         bpy.ops.object.transform_apply(location=False,rotation=False,scale=True);parts.append(obj)
         return obj
     for side,sign in [('L',1),('R',-1)]:
-        # Smaller deltoids merge into the pectorals instead of sitting on top.
-        ellipsoid((sign*.326,.006,1.555),(.098,.106,.108))
-        for name,radius in [('upper_arm',.091),('forearm',.076)]:
-            a,b,_=joints[name+'.'+side];a,b=Vector(a),Vector(b)
-            axis=(b-a).normalized();u=axis.cross(Vector((0,1,0))).normalized();v=axis.cross(u)
-            arm_vertices=[];arm_faces=[];segments=28;steps=20
-            for j in range(steps+1):
-                t=j/steps
-                r=(.065+.022*math.sin(t*math.pi)-.001*t) if name=='upper_arm' else (.065+.010*math.sin(t*math.pi)-.019*t)
-                center=a+(b-a)*t+axis*(.018*t)
-                for i in range(segments):
-                    theta=2*math.pi*i/segments;arm_vertices.append(center+r*(math.cos(theta)*u+math.sin(theta)*v))
-            for j in range(steps):
-                for i in range(segments):
-                    ia=j*segments+i;ib=j*segments+(i+1)%segments;arm_faces.append((ia,ib,ib+segments,ia+segments))
-            arm_faces.append(tuple(reversed(range(segments))));arm_faces.append(tuple(steps*segments+i for i in range(segments)))
-            am=bpy.data.meshes.new('Tapered '+name);am.from_pydata(arm_vertices,[],arm_faces);am.update()
-            obj=bpy.data.objects.new('Anatomical '+name,am);bpy.context.collection.objects.link(obj);parts.append(obj)
-        elbow=joints['forearm.'+side][0]
-        ellipsoid(elbow,(.068,.068,.068))
+        # One continuous sweep from the chest through the elbow to the wrist.
+        # No spherical joint caps or intersecting upper/forearm tubes.
+        control=[(sign*.160,.015,1.520,.070),(sign*.330,0,1.555,.075),
+                 (sign*.465,-.015,1.420,.077),(sign*.560,-.029,1.285,.058),
+                 (sign*.590,-.035,1.230,.049),(sign*.578,-.150,1.321,.063),
+                 (sign*.535,-.310,1.435,.052),(sign*.513,-.401,1.510,.044)]
+        points=[Vector(p[:3]) for p in control]
+        vertices=[];polygons=[];steps=96;segments=32
+        def section(t):
+            k=min(len(points)-2,int(t));f=t-k
+            a=points[max(0,k-1)];b=points[k];c=points[k+1];d=points[min(len(points)-1,k+2)]
+            center=.5*((2*b)+(-a+c)*f+(2*a-5*b+4*c-d)*f*f+(-a+3*b-3*c+d)*f*f*f)
+            radius=control[k][3]*(1-f)+control[k+1][3]*f
+            return center,radius
+        for j in range(steps+1):
+            t=(len(points)-1)*j/steps;center,r=section(t)
+            tangent=(section(min(len(points)-1,t+.005))[0]-section(max(0,t-.005))[0]).normalized()
+            u=tangent.cross(Vector((0,1,0))).normalized();v=tangent.cross(u)
+            for i in range(segments):
+                theta=2*math.pi*i/segments
+                vertices.append(center+r*(math.cos(theta)*u+.93*math.sin(theta)*v))
+        for j in range(steps):
+            for i in range(segments):
+                ia=j*segments+i;ib=j*segments+(i+1)%segments;polygons.append((ia,ib,ib+segments,ia+segments))
+        polygons.append(tuple(reversed(range(segments))));polygons.append(tuple(steps*segments+i for i in range(segments)))
+        am=bpy.data.meshes.new('Continuous human arm');am.from_pydata(vertices,[],polygons);am.update()
+        obj=bpy.data.objects.new('Shoulder to wrist '+side,am);bpy.context.collection.objects.link(obj);parts.append(obj)
     bpy.ops.object.select_all(action='DESELECT')
     for part in parts:part.select_set(True)
     bpy.context.view_layer.objects.active=torso;bpy.ops.object.join()
@@ -87,8 +96,8 @@ def build_upper_body(skin,width,joints):
     for vertex in torso.data.vertices:
         p=vertex.co;side='L' if p.x>=0 else 'R'
         arm_weight=smooth(.235,.435,abs(p.x))*(1-smooth(1.66,1.76,p.z))
-        upper=math.exp(-(distance(p,*joints['upper_arm.'+side][:2])/.10)**2)
-        lower=math.exp(-(distance(p,*joints['forearm.'+side][:2])/.10)**2)
+        upper=math.exp(-(distance(p,*joints['upper_arm.'+side][:2])/.065)**2)
+        lower=math.exp(-(distance(p,*joints['forearm.'+side][:2])/.065)**2)
         fore=lower/(upper+lower+1e-20)
         head=smooth(1.63,1.815,p.z);pelvis=1-smooth(1.10,1.29,p.z)
         weights={'upper_arm.'+side:arm_weight*(1-fore),'forearm.'+side:arm_weight*fore,

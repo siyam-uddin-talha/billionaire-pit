@@ -1,6 +1,6 @@
 """Tapered anatomical legs and fitted fight shorts, using the shared skeleton."""
 import bpy, math
-from build_upper_body import smooth
+from build_upper_body import smooth, torso_section
 
 def build_lower_body(skin,cloth,accent,width):
     shorts=[]
@@ -38,6 +38,10 @@ def build_lower_body(skin,cloth,accent,width):
             cy=.025-.043*smooth(.28,.53,z)+.024*smooth(.64,.86,z)
             sections.append((z,cx,rx,ry,cy))
         obj=loft('Continuous leg '+side,sections,skin,weights)
+        for vertex in obj.data.vertices:
+            t=smooth(.94,1.10,vertex.co.z)
+            belly=torso_section(max(1.08,vertex.co.z),width)[0]
+            vertex.co.x*=1-t+t*min(1,(belly-.005)/.30)
         modifier=obj.modifiers.new('Relax knee and calf contours','SMOOTH');modifier.factor=.65;modifier.iterations=4
         bpy.context.view_layer.objects.active=obj;bpy.ops.object.modifier_apply(modifier=modifier.name)
         def short_weights(z):
@@ -46,6 +50,13 @@ def build_lower_body(skin,cloth,accent,width):
              (.95,sign*.179,.160,.166,.003),(1.045,sign*.150,.170,.170,.003),(1.125,sign*.127,.153,.154,0)],cloth,short_weights))
         loft('Short hem '+side,[(.832,sign*.198,.145,.149,.003),(.848,sign*.196,.146,.152,.003)],accent,short_weights)
     shorts.append(loft('Continuous shorts hip panel',[(.995,0,.266,.165,0),(1.065,0,.292,.174,0),(1.128,0,.260,.155,0)],cloth,lambda z:{'pelvis':1}))
+    # Fit the same abdominal cross-section used by this fighter's torso.
+    for obj in shorts:
+        for vertex in obj.data.vertices:
+            z=vertex.co.z;t=smooth(.95,1.128,z)
+            rx,ry,cy=torso_section(max(1.08,z),width)
+            vertex.co.x*=1-t+t*(rx+.006)/.28
+            vertex.co.y*=1-t+t*(ry+.006)/.155
     bpy.ops.object.select_all(action='DESELECT')
     for obj in shorts:obj.select_set(True)
     garment=shorts[-1];bpy.context.view_layer.objects.active=garment;bpy.ops.object.join()
@@ -60,4 +71,8 @@ def build_lower_body(skin,cloth,accent,width):
     for vertex in garment.data.vertices:
         p=smooth(.98,1.115,vertex.co.z);side='L' if vertex.co.x>=0 else 'R'
         groups['pelvis'].add([vertex.index],p,'REPLACE');groups['thigh.'+side].add([vertex.index],1-p,'REPLACE')
-    loft('Fitted waistband',[(1.112,0,.269,.160,0),(1.143,0,.250,.151,0)],accent,lambda z:{'pelvis':1})
+    waistband=[]
+    for z in [1.114,1.126,1.138,1.146]:
+        rx,ry,cy=torso_section(z,width)
+        waistband.append((z,0,rx+.004,ry+.004,cy))
+    loft('Fitted waistband',waistband,accent,lambda z:{'pelvis':1})

@@ -10,4 +10,6 @@ Generation brief: A 2×2 atlas of distinct, recognizable, realistic game-quality
 
 Original synthetic audio was created with `scripts/build_audio.py`. It contains no voice clones or third-party recordings. Barlow, Barlow Condensed and IBM Plex Mono are served by Google Fonts.
 
+`scripts/build_upper_body.py` creates a continuous welded surface across the chest, trapezius, neck, shoulders and arms. Clavicles, pectorals and neck tendons use shallow geometric relief. Blended head/chest/arm weights preserve the connected surface during combat animations.
+
 This is a fictional satirical depiction. No affiliation or endorsement is implied. Commercial likeness review is not part of this implementation.

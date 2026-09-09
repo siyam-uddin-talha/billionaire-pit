@@ -6,6 +6,7 @@ OUT = os.path.join(ROOT,'public','models')
 os.makedirs(OUT, exist_ok=True)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_head import build_head
+from build_upper_body import build_upper_body
 
 def reset():
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
@@ -61,39 +62,14 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
         b=arm.edit_bones.new(name);b.head=h;b.tail=t
         if parent:b.parent=arm.edit_bones[parent]
     bpy.ops.object.mode_set(mode='OBJECT');rig.select_set(False)
-    # Continuous torso surface with shallow muscular relief, rather than separate spherical muscles.
-    torso_vertices=[];torso_faces=[];ring_segments=48;height_segments=30
-    for j in range(height_segments+1):
-        t=j/height_segments;z=1.09+t*.58
-        rx=(.238+.102*math.sin(t*math.pi*.92))*width;ry=.153+.026*math.sin(t*math.pi)
-        if t>.88:
-            shoulder_blend=(t-.88)/.12;rx=rx*(1-shoulder_blend)+.084*shoulder_blend;ry=ry*(1-shoulder_blend)+.079*shoulder_blend
-        for i in range(ring_segments):
-            theta=2*math.pi*i/ring_segments;x=rx*math.cos(theta);y=ry*math.sin(theta)
-            if y<0:
-                front=max(0,-math.sin(theta))**5
-                pec=.027*math.exp(-((abs(x)-.15)/.12)**2-((z-1.49)/.085)**2)
-                abdominal=sum(.008*math.exp(-((abs(x)-.063)/.05)**2-((z-a)/.037)**2) for a in [1.21,1.30,1.38])
-                y-=front*(pec+abdominal)
-            torso_vertices.append((x,y,z))
-    for j in range(height_segments):
-        for i in range(ring_segments):
-            a=j*ring_segments+i;b=j*ring_segments+(i+1)%ring_segments;torso_faces.append((a,b,b+ring_segments,a+ring_segments))
-    top_index=len(torso_vertices);torso_vertices.append((0,0,1.675))
-    for i in range(ring_segments):torso_faces.append((height_segments*ring_segments+i,height_segments*ring_segments+(i+1)%ring_segments,top_index))
-    tm=bpy.data.meshes.new('Continuous anatomical torso');tm.from_pydata(torso_vertices,[],torso_faces);tm.update();to=bpy.data.objects.new('Torso',tm);bpy.context.collection.objects.link(to);to.data.materials.append(skin)
-    for poly in tm.polygons:poly.use_smooth=True
-    to.vertex_groups.new(name='chest').add(list(range(len(torso_vertices))),1,'REPLACE')
-    # One fitted surface from chin to crown; no separate skull behind a face card.
-    uv('Neck',(0,.021,1.725),(.069,.073,.105),skin,'head',32)
+    build_upper_body(skin,width,joints)
     build_head(fid, os.path.join(OUT,'fighter-face-atlas.png'), skin)
     box('Fight shorts',(0,.005,1.005),(.54*width,.35,.28),black,'pelvis',.055)
     box('Waistband',(0,-.004,1.14),(.55*width,.36,.055),accent,'pelvis',.015)
     box('Belt clasp',(0,-.193,1.13),(.07,.018,.045),metal,'pelvis',.008)
     for s,sgn in [('L',1),('R',-1)]:
-        for part,r,mt in [('upper_arm',.112,skin),('forearm',.087,skin),('thigh',.139,skin),('shin',.086,skin)]:
+        for part,r,mt in [('thigh',.139,skin),('shin',.086,skin)]:
             a,b,_=joints[f'{part}.{s}'];limb(part,a,b,r,mt,f'{part}.{s}')
-        uv('Deltoid',(sgn*.365,0,1.586),(.128,.13,.15),skin,f'upper_arm.{s}')
         uv('Short leg',(sgn*.18,0,.95),(.175,.18,.18),black,f'thigh.{s}')
         box('Short stripe',(sgn*.321,-.02,.956),(.025,.24,.20),accent,f'thigh.{s}',.008)
         uv('Knee pad',(sgn*.24,-.067,.56),(.095,.08,.088),black,f'shin.{s}')

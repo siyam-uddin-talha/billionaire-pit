@@ -12,4 +12,6 @@ Original synthetic audio was created with `scripts/build_audio.py`. It contains 
 
 `scripts/build_upper_body.py` creates a continuous welded surface across the chest, trapezius, neck, shoulders and arms. Clavicles, pectorals and neck tendons use shallow geometric relief. Blended head/chest/arm weights preserve the connected surface during combat animations.
 
+`scripts/build_lower_body.py` creates tapered thigh/knee/calf/ankle surfaces with blended leg weights and fitted shorts with a continuous hip panel. The export applies the same adult-proportion mapping to mesh vertices, skeleton rest positions and strike targets, keeping total height approximately constant while lengthening legs and reducing head, shoulder, glove and boot bulk.
+
 This is a fictional satirical depiction. No affiliation or endorsement is implied. Commercial likeness review is not part of this implementation.

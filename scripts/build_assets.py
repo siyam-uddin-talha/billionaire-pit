@@ -7,6 +7,7 @@ os.makedirs(OUT, exist_ok=True)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from build_head import build_head
 from build_upper_body import build_upper_body
+from build_lower_body import build_lower_body
 
 def reset():
     bpy.ops.object.select_all(action='SELECT'); bpy.ops.object.delete(use_global=False)
@@ -48,7 +49,7 @@ ROSTER=[('elon_musk',(.55,.345,.26),(.075,.045,.035),(.64,.9,.045),1.08,1.05),('
 for fid,skinC,hairC,accentC,width,headscale in ROSTER:
     reset()
     skin=mat('Skin',skinC,0,.59); shadow=mat('Skin contours',tuple(v*.72 for v in skinC),0,.65)
-    hair=mat('Hair',tuple(v*.34 for v in hairC),0,.92); black=mat('Obsidian fightwear',(.018,.024,.029),.15,.36)
+    hair=mat('Hair',tuple(v*.34 for v in hairC),0,.92); black=mat('Obsidian fightwear',(.018,.024,.029),0,.76)
     accent=mat('Fighter accent',accentC,.2,.36); glow=mat('Luminous seam',accentC,.15,.3,1.4)
     white=mat('Eye whites',(.79,.83,.8),0,.4); pupil=mat('Iris',(.025,.055,.07),0,.4)
     metal=mat('Titanium',(.25,.29,.31),.7,.32)
@@ -64,23 +65,15 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
     bpy.ops.object.mode_set(mode='OBJECT');rig.select_set(False)
     build_upper_body(skin,width,joints)
     build_head(fid, os.path.join(OUT,'fighter-face-atlas.png'), skin)
-    box('Fight shorts',(0,.005,1.005),(.54*width,.35,.28),black,'pelvis',.055)
-    box('Waistband',(0,-.004,1.14),(.55*width,.36,.055),accent,'pelvis',.015)
-    box('Belt clasp',(0,-.193,1.13),(.07,.018,.045),metal,'pelvis',.008)
+    build_lower_body(skin,black,accent,width)
     for s,sgn in [('L',1),('R',-1)]:
-        for part,r,mt in [('thigh',.139,skin),('shin',.086,skin)]:
-            a,b,_=joints[f'{part}.{s}'];limb(part,a,b,r,mt,f'{part}.{s}')
-        uv('Short leg',(sgn*.18,0,.95),(.175,.18,.18),black,f'thigh.{s}')
-        box('Short stripe',(sgn*.321,-.02,.956),(.025,.24,.20),accent,f'thigh.{s}',.008)
-        uv('Knee pad',(sgn*.24,-.067,.56),(.095,.08,.088),black,f'shin.{s}')
-        uv('MMA glove',(sgn*.515,-.405,1.531),(.114,.108,.135),black,f'hand.{s}')
-        box('Glove knuckles',(sgn*.51,-.484,1.56),(.176,.067,.09),accent,f'hand.{s}',.026)
-        uv('Thumb',(sgn*.435,-.42,1.51),(.046,.06,.071),black,f'hand.{s}')
-        box('Wrist wrap',(sgn*.525,-.336,1.449),(.158,.13,.08),accent,f'forearm.{s}',.013)
-        uv('Shin wrap',(sgn*.264,.025,.225),(.101,.10,.13),black,f'shin.{s}')
-        box('Boot',(sgn*.27,-.075,.074),(.20,.34,.14),black,f'foot.{s}',.045)
-        box('Boot sole',(sgn*.27,-.08,.022),(.205,.34,.038),accent,f'foot.{s}',.008)
-        box('Boot seam',(sgn*.27,-.234,.08),(.10,.015,.026),glow,f'foot.{s}',.005)
+        uv('MMA glove',(sgn*.515,-.405,1.531),(.083,.083,.102),black,f'hand.{s}')
+        box('Glove knuckles',(sgn*.51,-.465,1.55),(.130,.046,.068),accent,f'hand.{s}',.026)
+        uv('Thumb',(sgn*.455,-.42,1.51),(.032,.045,.055),black,f'hand.{s}')
+        box('Wrist wrap',(sgn*.525,-.336,1.449),(.126,.114,.052),accent,f'forearm.{s}',.013)
+        box('Boot',(sgn*.27,-.075,.074),(.162,.295,.12),black,f'foot.{s}',.045)
+        box('Boot sole',(sgn*.27,-.08,.022),(.166,.30,.024),accent,f'foot.{s}',.008)
+        box('Boot seam',(sgn*.27,-.215,.065),(.10,.015,.026),glow,f'foot.{s}',.005)
     # Shared skinned mesh retains normalized material UVs and identical bone names.
     meshes=[o for o in bpy.context.scene.objects if o.type=='MESH']
     bpy.ops.object.select_all(action='DESELECT')
@@ -92,6 +85,17 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
     for poly in body.data.polygons:
         if 'continuous scalp and jaw' not in body.data.materials[poly.material_index].name:
             for loop in poly.loop_indices:albedo.data[loop].color=(1,1,1,1)
+    # Adult proportions: longer legs, narrower torso, smaller head; preserve height.
+    def proportion(p):
+        x,y,z=p
+        sx=.78+(.84-.78)*max(0,min(1,(z-1.65)/.115))
+        nz=z*1.10 if z<=1.14 else (1.254+(z-1.14)*.93 if z<=1.765 else 1.83525+(z-1.765)*.82)
+        return Vector((x*sx,y*.90,nz))
+    for vertex in body.data.vertices:vertex.co=proportion(vertex.co)
+    bpy.context.view_layer.objects.active=rig;bpy.ops.object.mode_set(mode='EDIT')
+    for bone in arm.edit_bones:
+        bone.head=proportion(bone.head);bone.tail=proportion(bone.tail)
+    bpy.ops.object.mode_set(mode='OBJECT')
     mod=body.modifiers.new('Shared fighter rig','ARMATURE');mod.object=rig;body.parent=rig
     for b in rig.pose.bones:b.rotation_mode='XYZ'
     def clip(name, duration, poses, loop=False):
@@ -105,7 +109,7 @@ for fid,skinC,hairC,accentC,width,headscale in ROSTER:
                 if b.name=='root':b.location=pose.get('_root',(0,0,0))
             bpy.context.view_layer.update()
             for bone_name,target in pose.get('_targets',{}).items():
-                b=rig.pose.bones[bone_name];direction=Vector(target)-b.head
+                b=rig.pose.bones[bone_name];direction=proportion(target)-b.head
                 delta=(b.tail-b.head).rotation_difference(direction)
                 b.matrix=Matrix.LocRotScale(b.head,delta @ b.matrix.to_quaternion(),Vector((1,1,1)))
                 bpy.context.view_layer.update()

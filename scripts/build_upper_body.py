@@ -11,7 +11,7 @@ def build_upper_body(skin,width,joints):
     # Cross sections continue through the collar into the neck under the jaw.
     profile=[(1.08,.225,.137,0),(1.22,.242,.148,0),(1.39,.281,.164,.008),
              (1.51,.319,.163,.014),(1.58,.322,.135,.022),
-             (1.63,.254,.110,.027),(1.68,.135,.085,.029),
+             (1.63,.210,.102,.027),(1.68,.100,.079,.029),
              (1.73,.073,.072,.030),(1.79,.070,.072,.027),(1.835,.082,.075,.023)]
     verts=[];faces=[];n=64;rows=80
     for j in range(rows+1):
@@ -50,12 +50,25 @@ def build_upper_body(skin,width,joints):
         return obj
     for side,sign in [('L',1),('R',-1)]:
         # Smaller deltoids merge into the pectorals instead of sitting on top.
-        ellipsoid((sign*.342,.006,1.562),(.112,.119,.125))
+        ellipsoid((sign*.326,.006,1.555),(.098,.106,.108))
         for name,radius in [('upper_arm',.091),('forearm',.076)]:
             a,b,_=joints[name+'.'+side];a,b=Vector(a),Vector(b)
-            obj=ellipsoid((a+b)/2,(radius,radius,(b-a).length/2+radius*.60))
-            obj.rotation_mode='QUATERNION';obj.rotation_quaternion=Vector((0,0,1)).rotation_difference(b-a)
-            bpy.context.view_layer.objects.active=obj;bpy.ops.object.transform_apply(location=False,rotation=True,scale=False)
+            axis=(b-a).normalized();u=axis.cross(Vector((0,1,0))).normalized();v=axis.cross(u)
+            arm_vertices=[];arm_faces=[];segments=28;steps=20
+            for j in range(steps+1):
+                t=j/steps
+                r=(.065+.022*math.sin(t*math.pi)-.001*t) if name=='upper_arm' else (.065+.010*math.sin(t*math.pi)-.019*t)
+                center=a+(b-a)*t+axis*(.018*t)
+                for i in range(segments):
+                    theta=2*math.pi*i/segments;arm_vertices.append(center+r*(math.cos(theta)*u+math.sin(theta)*v))
+            for j in range(steps):
+                for i in range(segments):
+                    ia=j*segments+i;ib=j*segments+(i+1)%segments;arm_faces.append((ia,ib,ib+segments,ia+segments))
+            arm_faces.append(tuple(reversed(range(segments))));arm_faces.append(tuple(steps*segments+i for i in range(segments)))
+            am=bpy.data.meshes.new('Tapered '+name);am.from_pydata(arm_vertices,[],arm_faces);am.update()
+            obj=bpy.data.objects.new('Anatomical '+name,am);bpy.context.collection.objects.link(obj);parts.append(obj)
+        elbow=joints['forearm.'+side][0]
+        ellipsoid(elbow,(.068,.068,.068))
     bpy.ops.object.select_all(action='DESELECT')
     for part in parts:part.select_set(True)
     bpy.context.view_layer.objects.active=torso;bpy.ops.object.join()

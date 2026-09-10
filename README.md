@@ -18,7 +18,7 @@ Open the URL printed by Vite. Minimum supported viewport: 768 × 600. No account
 - Hold L: block. Space: dodge. Escape: pause.
 - Touch-capable tablets have a movement pad and simultaneous action buttons.
 
-Win by knockout or more health after 60 seconds. Equal health starts a 15-second sudden-death period. Win Money (Elon Musk vs Mark Zuckerberg), AI (Dario Amodei vs Sam Altman), then Final Convergence between the actual winners of those rounds. Each opening-round winner advances even when the CPU wins, and checkpoints retain both finalists. Choose either eligible fighter in each round. Normal results depend on play; canonical outcomes are optional narrative configuration in `src/data/rounds.ts`.
+Win by knockout or more health after 60 seconds. Equal health starts a 15-second sudden-death period. Win Money (Elon Musk vs Mark Zuckerberg), AI (Dario Amodei vs Sam Altman), then Final Convergence between the actual winners of those rounds. Win each opening round to advance; losses offer a rematch, and checkpoints retain both finalists. Choose either eligible fighter in each round. Normal results depend on play; canonical outcomes are optional narrative configuration in `src/data/rounds.ts`.
 
 ## Structure
 

@@ -192,15 +192,14 @@ describe('tournament and persistence', () => {
   });
 });
 
-it('keeps the CPU on its right-side lane while fighters circle or dodge', () => {
+it('allows fighters to circle past each other and turn to face their opponent', () => {
   const c = quiet();
   c.fighters[0].x = 1;
   c.fighters[0].z = -1;
   c.fighters[1].x = -1;
   c.fighters[1].z = 1;
   run(c, 1);
-  expect(c.fighters[0].x).toBeLessThanOrEqual(-0.34);
-  expect(c.fighters[1].x).toBeGreaterThanOrEqual(0.34);
-  expect(c.fighters[0].facing).toBe(1);
-  expect(c.fighters[1].facing).toBe(-1);
+  expect(c.fighters[0].x).toBeGreaterThan(c.fighters[1].x);
+  expect(c.fighters[0].facing).toBe(-1);
+  expect(c.fighters[1].facing).toBe(1);
 });

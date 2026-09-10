@@ -262,11 +262,7 @@ export default function App() {
     return () => clearInterval(t);
   }, [screen]);
   useEffect(() => {
-    if (
-      screen === 'result' &&
-      (snapshot?.winner === 0 || snapshot?.winner === 1) &&
-      round < 2
-    ) {
+    if (screen === 'result' && snapshot?.winner === 0 && round < 2) {
       const next = round + 1;
       const winner =
         snapshot.winner === 0
@@ -862,27 +858,23 @@ export default function App() {
                     </span>
                   </div>
                   <p>
-                    {round < 2
-                      ? `${snapshot.winner === 0 ? fighter.name : opp.name} advances to the final.`
-                      : snapshot.winner === 0
-                        ? round === 2
-                          ? 'The pit has a new champion.'
-                          : 'One step closer to the crown.'
-                        : 'Every empire takes a hit. Go again.'}
+                    {snapshot.winner === 0
+                      ? round < 2
+                        ? `${fighter.name} advances to the final.`
+                        : 'The pit has a new champion.'
+                      : 'Every empire takes a hit. Rematch to advance.'}
                   </p>
                   <div className="result-actions">
                     <button
                       className="primary-button"
-                      onClick={
-                        snapshot.winner === 0 || round < 2 ? next : rematch
-                      }
+                      onClick={snapshot.winner === 0 ? next : rematch}
                     >
-                      {snapshot.winner === 0 || round < 2
+                      {snapshot.winner === 0
                         ? round === 2
                           ? 'CLAIM THE TROPHY'
                           : 'NEXT ROUND'
                         : 'REMATCH'}
-                      {snapshot.winner === 0 || round < 2 ? (
+                      {snapshot.winner === 0 ? (
                         <ArrowRight size={20} />
                       ) : (
                         <RotateCcw size={20} />

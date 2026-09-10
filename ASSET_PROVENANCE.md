@@ -18,4 +18,4 @@ Arm geometry uses a single curved shoulder-to-wrist surface without spherical jo
 
 This is a fictional satirical depiction. No affiliation or endorsement is implied. Commercial likeness review is not part of this implementation.
 
-The championship cup is procedural Babylon geometry in `src/engine/ChampionshipTrophy.ts`: a hollow lathed gold bowl, curved tube handles, stone foot, engraved brass plaque and original studio reflection map. The ceremony follows the champion’s right-hand grip throughout the existing lift animation.
+The championship cup is procedural Babylon geometry in `src/engine/ChampionshipTrophy.ts`: a hollow lathed gold bowl, curved tube handles, stone foot, engraved brass plaque and original studio reflection map. The ceremony uses arm rotation solving to keep both gloves on the handles during a fixed-size lift above the face. The engraved plaque displays the actual champion’s name.

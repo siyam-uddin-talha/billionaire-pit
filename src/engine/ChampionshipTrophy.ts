@@ -10,7 +10,7 @@ import { RawCubeTexture } from '@babylonjs/core/Materials/Textures/rawCubeTextur
 
 export const trophyGrip = new Vector3(0.43, 0.53, 0);
 
-export function createChampionshipTrophy(scene: Scene) {
+export function createChampionshipTrophy(scene: Scene, winnerName: string) {
   const root = new TransformNode('championship trophy', scene);
   // Small studio reflection map gives metal soft highlights without external assets.
   const faces = Array.from({ length: 6 }, (_, face) => {
@@ -120,7 +120,7 @@ export function createChampionshipTrophy(scene: Scene) {
   }
   const plaque = MeshBuilder.CreatePlane(
     'Engraved champion plaque',
-    { width: 0.3, height: 0.075 },
+    { width: 0.38, height: 0.105 },
     scene,
   );
   plaque.parent = root;
@@ -132,22 +132,20 @@ export function createChampionshipTrophy(scene: Scene) {
     scene,
     false,
   );
+  root.metadata = { winnerName };
   const ctx = lettering.getContext();
   ctx.fillStyle = '#b58a40';
   ctx.fillRect(0, 0, 1024, 256);
   ctx.fillStyle = '#302410';
-  ctx.font = 'bold 64px sans-serif';
+  const engravedName = winnerName.toUpperCase();
+  ctx.font = `bold ${Math.min(76, Math.floor(1500 / engravedName.length))}px sans-serif`;
   ctx.fillText(
-    'BILLIONAIRE PIT',
-    (1024 - ctx.measureText('BILLIONAIRE PIT').width) / 2,
+    engravedName,
+    (1024 - ctx.measureText(engravedName).width) / 2,
     108,
   );
   ctx.font = '42px sans-serif';
-  ctx.fillText(
-    'UNDISPUTED CHAMPION',
-    (1024 - ctx.measureText('UNDISPUTED CHAMPION').width) / 2,
-    183,
-  );
+  ctx.fillText('CHAMPION', (1024 - ctx.measureText('CHAMPION').width) / 2, 183);
   lettering.update();
   const engraving = new StandardMaterial('Engraved brass', scene);
   engraving.diffuseTexture = lettering;

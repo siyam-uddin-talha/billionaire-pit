@@ -74,6 +74,7 @@ export class BabylonGame {
   private arena: TransformNode | null = null;
   private platform: TransformNode;
   private trophy: TransformNode | null = null;
+  private ceremonyStarted = 0;
   private glow: GlowLayer;
   private shadow: ShadowGenerator;
   private rim: PointLight;
@@ -482,9 +483,19 @@ export class BabylonGame {
     this.animate(this.views[0], 'trophy_lift');
     this.arena?.setEnabled(false);
     this.platform.setEnabled(true);
-    if (!this.trophy) {
-      this.trophy = createChampionshipTrophy(this.scene);
-      this.trophy.scaling.setAll(0.72);
+    this.ceremonyStarted = performance.now();
+    if (this.trophy) {
+      this.trophy
+        .getChildMeshes()
+        .forEach((mesh) => this.shadow.removeShadowCaster(mesh));
+      this.trophy.dispose(false, true);
+    }
+    {
+      this.trophy = createChampionshipTrophy(
+        this.scene,
+        fighterById(this.selected).name,
+      );
+      this.trophy.scaling.setAll(0.6);
       this.trophy
         .getChildMeshes()
         .forEach((mesh) => this.shadow.addShadowCaster(mesh));
@@ -504,22 +515,62 @@ export class BabylonGame {
   private updateTrophyGrip() {
     if (this.mode !== 'trophy' || !this.trophy || !this.views[0]) return;
     const view = this.views[0];
-    const hand = view.entries.skeletons
-      .flatMap((s) => s.bones)
-      .find((b) => b.name.endsWith('hand.R'))
-      ?.getTransformNode();
-    if (!hand) return;
-    hand.computeWorldMatrix(true);
-    // The handle stays in the glove throughout the lift and final held pose.
-    const grip = hand.getAbsolutePosition();
-    this.trophy.rotation.z = -0.08;
-    this.trophy.computeWorldMatrix(true);
-    const offset = Vector3.TransformNormal(
-      trophyGrip,
-      this.trophy.getWorldMatrix(),
+    const bones = view.entries.skeletons.flatMap((s) => s.bones);
+    const t = Math.min(1, (performance.now() - this.ceremonyStarted) / 2600);
+    const eased = t * t * (3 - 2 * t);
+    // A fixed-size cup rises between both hands. Arm rotations solve each grip
+    // without stretching bones or moving the trophy to only one wrist.
+    this.trophy.rotation.set(0, 0, 0);
+    this.trophy.position.set(
+      0,
+      1.3 + eased * 1.04 - trophyGrip.y * 0.6,
+      0.28 - eased * 0.12,
     );
-    this.trophy.position.copyFrom(grip.subtract(offset));
     this.trophy.computeWorldMatrix(true);
+    for (const side of ['L', 'R']) {
+      const hand = bones
+        .find((b) => b.name.endsWith('hand.' + side))
+        ?.getTransformNode();
+      const joints = ['forearm.', 'upper_arm.'].map((prefix) =>
+        bones.find((b) => b.name.endsWith(prefix + side))?.getTransformNode(),
+      );
+      if (!hand || joints.some((joint) => !joint)) continue;
+      hand.computeWorldMatrix(true);
+      const sign = hand.getAbsolutePosition().x >= 0 ? 1 : -1;
+      const target = Vector3.TransformCoordinates(
+        new Vector3(sign * trophyGrip.x, trophyGrip.y, 0),
+        this.trophy.getWorldMatrix(),
+      );
+      for (let iteration = 0; iteration < 24; iteration++) {
+        for (const joint of joints) {
+          const parent = joint!.parent as TransformNode;
+          parent.computeWorldMatrix(true);
+          const inverse = parent.getWorldMatrix().clone().invert();
+          hand.computeWorldMatrix(true);
+          const from = Vector3.TransformCoordinates(
+            hand.getAbsolutePosition(),
+            inverse,
+          )
+            .subtract(joint!.position)
+            .normalize();
+          const to = Vector3.TransformCoordinates(target, inverse)
+            .subtract(joint!.position)
+            .normalize();
+          const delta = Quaternion.Identity();
+          Quaternion.FromUnitVectorsToRef(from, to, delta);
+          joint!.rotationQuaternion = delta.multiply(
+            joint!.rotationQuaternion ??
+              Quaternion.FromEulerVector(joint!.rotation),
+          );
+          joint!.computeWorldMatrix(true);
+        }
+        hand.computeWorldMatrix(true);
+        if (
+          Vector3.DistanceSquared(hand.getAbsolutePosition(), target) < 0.000004
+        )
+          break;
+      }
+    }
   }
   private syncViews() {
     if (!this.combat) return;

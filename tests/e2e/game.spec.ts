@@ -259,17 +259,22 @@ test('championship cup stays in every champion’s glove during the lift', async
       await page.waitForTimeout(delay);
       const held = await page.evaluate(() => {
         const game = (window as any).__pitTest;
-        const hand = game.views[0].entries.skeletons
+        const hands = game.views[0].entries.skeletons
           .flatMap((s: any) => s.bones)
-          .find((b: any) => b.name.endsWith('hand.R'))
-          .getTransformNode();
-        const V = hand.position.constructor;
-        const handle = V.TransformCoordinates(
-          new V(0.43, 0.53, 0),
-          game.trophy.getWorldMatrix(),
-        );
+          .filter((b: any) => /hand\.[LR]$/.test(b.name))
+          .map((b: any) => b.getTransformNode());
+        const V = hands[0].position.constructor;
+        const distances = hands.map((hand: any) => {
+          const sign = hand.getAbsolutePosition().x >= 0 ? 1 : -1;
+          const handle = V.TransformCoordinates(
+            new V(sign * 0.43, 0.53, 0),
+            game.trophy.getWorldMatrix(),
+          );
+          return V.Distance(handle, hand.getAbsolutePosition());
+        });
         return {
-          distance: V.Distance(handle, hand.getAbsolutePosition()),
+          distance: Math.max(...distances),
+          winnerName: game.trophy.metadata.winnerName,
           height: game.trophy.position.y,
           cup: game.trophy
             .getChildMeshes()
@@ -279,6 +284,7 @@ test('championship cup stays in every champion’s glove during the lift', async
       expect(held.distance).toBeLessThan(0.015);
       expect(held.height).toBeGreaterThan(0.4);
       expect(held.cup).toBe(true);
+      expect(held.winnerName.toLowerCase().replaceAll(' ', '_')).toBe(id);
     }
   }
 });

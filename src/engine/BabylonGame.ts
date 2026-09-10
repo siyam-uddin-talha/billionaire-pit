@@ -59,6 +59,8 @@ interface FighterView {
   entries: InstantiatedEntries;
   clips: Map<string, AnimationGroup>;
   action: string;
+  head: TransformNode | null;
+  headRest: Quaternion;
 }
 export class BabylonGame {
   engine: Engine;
@@ -108,7 +110,10 @@ export class BabylonGame {
       1 / Math.min(window.devicePixelRatio || 1, 2),
     );
     this.scene = new Scene(this.engine);
-    this.scene.onBeforeRenderObservable.add(() => this.updateTrophyGrip());
+    this.scene.onBeforeRenderObservable.add(() => {
+      this.updateTrophyGrip();
+      this.updateArenaFaces();
+    });
     this.scene.clearColor = new Color4(0.035, 0.043, 0.039, 0);
     this.scene.ambientColor = new Color3(0.35, 0.36, 0.33);
     this.camera = new ArcRotateCamera(
@@ -146,9 +151,13 @@ export class BabylonGame {
     this.rim.diffuse = Color3.FromHexString('#d2ff43');
     this.rim.intensity = 2.1;
     this.rim.range = 6;
-    const blue = new PointLight('cool edge', new Vector3(-2, 2, 1), this.scene);
-    blue.diffuse = new Color3(0.46, 0.66, 0.9);
-    blue.intensity = 0.6;
+    const blue = new PointLight(
+      'cool edge',
+      new Vector3(-2, 2.8, -3),
+      this.scene,
+    );
+    blue.diffuse = new Color3(0.82, 0.88, 1);
+    blue.intensity = 0.85;
     blue.range = 7;
     this.shadow = new ShadowGenerator(1024, key);
     this.shadow.usePercentageCloserFiltering = true;
@@ -280,7 +289,7 @@ export class BabylonGame {
       mesh.receiveShadows = true;
       mesh.computeWorldMatrix(true);
       const p = mesh.getBoundingInfo().boundingBox.centerWorld;
-      if (p.z > 1 && p.y > 0.4) mesh.visibility = 0.1;
+      if (p.z < -1 && p.y > 0.4) mesh.visibility = 0.04;
     }
     // A subtle functional octagon marking and the arena title are rendered onto the mat.
     const texture = new DynamicTexture(
@@ -329,7 +338,7 @@ export class BabylonGame {
         bb = ((side + 1) * Math.PI) / 4 + Math.PI / 8;
       const p = new Vector3(4.5 * Math.cos(aa), 0, 4.5 * Math.sin(aa)),
         q = new Vector3(4.5 * Math.cos(bb), 0, 4.5 * Math.sin(bb));
-      if ((p.z + q.z) / 2 > 1) continue;
+      if ((p.z + q.z) / 2 < -1) continue;
       const wires: Vector3[][] = [];
       const point = (u: number, y: number) =>
         new Vector3(p.x + (q.x - p.x) * u, y, p.z + (q.z - p.z) * u);
@@ -396,7 +405,15 @@ export class BabylonGame {
         mesh.material.directIntensity = 1;
       }
     }
-    return { root, entries, clips, action: '' };
+    const headBone = entries.skeletons
+      .flatMap((s) => s.bones)
+      .find((b) => b.name.endsWith('head'));
+    const head = headBone?.getTransformNode() ?? null;
+    const headRest = Quaternion.Identity();
+    headBone
+      ?.getRestMatrix()
+      .decompose(Vector3.One(), headRest, Vector3.Zero());
+    return { root, entries, clips, action: '', head, headRest };
   }
   private animate(view: FighterView, action: string) {
     if (action === view.action) return;
@@ -572,13 +589,31 @@ export class BabylonGame {
       }
     }
   }
+  private updateArenaFaces() {
+    if (
+      !['fight', 'intro', 'result', 'paused'].includes(this.mode) ||
+      !this.combat
+    )
+      return;
+    this.views.forEach((view, i) => {
+      if (!view.head) return;
+      // Use the rest pose every frame, never the previous adjusted rotation.
+      // This removes idle/head-clip wobble and avoids accumulating camera yaw.
+      view.head.rotationQuaternion = Quaternion.RotationAxis(
+        Vector3.Up(),
+        this.combat!.fighters[i].facing * -0.5,
+      ).multiply(view.headRest);
+      view.head.computeWorldMatrix(true);
+    });
+  }
+
   private syncViews() {
     if (!this.combat) return;
     this.combat.fighters.forEach((f, i) => {
       const v = this.views[i];
       if (!v) return;
       v.root.position.set(f.x, 0, f.z);
-      v.root.rotation.y = f.facing * (Math.PI / 2 + 0.18);
+      v.root.rotation.y = f.facing * (Math.PI / 2 + 0.35);
       this.animate(v, f.action);
     });
   }
@@ -676,17 +711,17 @@ export class BabylonGame {
     if (this.mode === 'fight' && this.combat) {
       const [a, b] = this.combat.fighters;
       const radius = Math.max(
-        8.2,
-        Math.min(11.8, 7 + Math.abs(a.x - b.x) * 0.65),
+        6.5,
+        Math.min(12.5, 5.9 + Math.abs(a.x - b.x) * 0.6),
       );
       this.camera.radius += (radius - this.camera.radius) * Math.min(1, dt * 2);
       this.camera.target.x +=
-        (0.2 * (a.x + b.x) - this.camera.target.x) * dt * 3;
+        (0.5 * (a.x + b.x) - this.camera.target.x) * dt * 3;
       if (this.shake > 0.002) {
         this.camera.target.y =
-          0.8 + Math.sin(this.animationTime * 70) * this.shake;
+          1.02 + Math.sin(this.animationTime * 70) * this.shake;
         this.shake *= 0.83;
-      } else this.camera.target.y = 0.8;
+      } else this.camera.target.y = 1.02;
     }
     this.scene.animationsEnabled = this.mode !== 'paused';
     if (

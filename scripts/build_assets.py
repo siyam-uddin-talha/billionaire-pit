@@ -189,3 +189,6 @@ print('FIGHTER AND ARENA ASSETS COMPLETE')
 # Preserve the animated neck overlap and individual side hair profiles.
 from refine_head_profiles import main as refine_exported_heads
 refine_exported_heads()
+
+from sculpt_hair_silhouettes import main as sculpt_exported_hair
+sculpt_exported_hair()

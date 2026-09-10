@@ -21,3 +21,7 @@ This is a fictional satirical depiction. No affiliation or endorsement is implie
 The championship cup is procedural Babylon geometry in `src/engine/ChampionshipTrophy.ts`: a hollow lathed gold bowl, curved tube handles, stone foot, engraved brass plaque and original studio reflection map. The ceremony uses arm rotation solving to keep both gloves on the handles during a fixed-size lift above the face. The engraved plaque displays the actual champion’s name.
 
 `refine_head_profiles.py` refines the exported GLB geometry and vertex colors: jaw/neck overlap and skin weights, individual temple/nape/sideburn profiles, subtle scalp shape variation and ear silhouette adjustments. It preserves the source face atlas and does not alter raster images. The side profiles remain stylized approximations.
+
+`sculpt_hair_silhouettes.py` further differentiates the crown geometry: swept forelock, short crop, fuller waves, and lower side part. Arena framing and head presentation expose more of the unchanged face atlas during combat.
+
+Arena heads use a stable rest-pose rotation plus a fixed broadcast-facing angle, avoiding accumulated yaw and idle head wobble.

@@ -185,3 +185,7 @@ for s in [-1,1]:
     bpy.ops.mesh.primitive_torus_add(major_radius=.24,minor_radius=.045,major_segments=20,minor_segments=8,location=(s*.3,0,.8),rotation=(math.pi/2,0,0));bpy.context.object.data.materials.append(gold)
 bpy.ops.export_scene.gltf(filepath=os.path.join(OUT,'trophy.glb'),export_format='GLB',export_animations=False)
 print('FIGHTER AND ARENA ASSETS COMPLETE')
+
+# Preserve the animated neck overlap and individual side hair profiles.
+from refine_head_profiles import main as refine_exported_heads
+refine_exported_heads()

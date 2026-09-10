@@ -64,9 +64,7 @@ const controls = [
 function Brand({ small = false }: { small?: boolean }) {
   return (
     <div className={`brand ${small ? 'small' : ''}`}>
-      <span className="brand-symbol">
-        B<span>\</span>P
-      </span>
+      <span className="brand-symbol">BP</span>
       <span>
         BILLIONAIRE
         <span>
@@ -416,9 +414,6 @@ export default function App() {
       <div className="desktop-game">
         <header className="topbar">
           <Brand small />
-          <div className="broadcast-label">
-            <i /> UNDERGROUND FIGHT NETWORK <span> / </span> SEASON 01
-          </div>
           <div className="header-actions">
             <button
               className="sound-button"
@@ -928,12 +923,12 @@ export default function App() {
         </div>
         <footer className="footer">
           <div className="footer-status">
-            <i />{' '}
+            {(screen === 'error' || screen === 'loading') && <i />}
             {screen === 'error'
               ? 'SYSTEM OFFLINE'
               : screen === 'loading'
                 ? 'SYSTEMS INITIALIZING'
-                : 'ALL SYSTEMS ONLINE'}
+                : null}
             <span>V.1.0</span>
           </div>
           {screen === 'fight' || screen === 'paused' || screen === 'intro' ? (
@@ -953,15 +948,28 @@ export default function App() {
               <kbd>ENTER</kbd> {screen === 'select' ? 'CONFIRM' : 'SELECT'}
             </div>
           )}
-          <button
-            className="help-button"
-            onClick={() => {
-              if (screen === 'fight') send('paused');
-              setHowTo(true);
-            }}
-          >
-            <CircleHelp size={15} /> HOW TO PLAY
-          </button>
+          <div className="footer-links">
+            <button
+              className="help-button"
+              onClick={() => {
+                if (screen === 'fight') send('paused');
+                setHowTo(true);
+              }}
+            >
+              <CircleHelp size={15} /> HOW TO PLAY
+            </button>
+            <a
+              className="help-button"
+              href="https://www.upwork.com/freelancers/siyamuddintalha"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => {
+                if (screen === 'fight') send('paused');
+              }}
+            >
+              FIND ME <ArrowUpRight size={15} />
+            </a>
+          </div>
         </footer>
       </div>
       <Dialog open={settings} onOpenChange={setSettings}>

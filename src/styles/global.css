@@ -125,11 +125,6 @@ button:disabled {
   transform: skew(-5deg);
   padding-right: 6px;
 }
-.brand-symbol > span {
-  font-size: 24px;
-  letter-spacing: -6px;
-  margin: 0 3px 0 -2px;
-}
 .brand.small {
   font-size: 17px;
   gap: 10px;
@@ -406,10 +401,17 @@ button:disabled {
   color: #aabb8d;
 }
 .parody-note {
+  font-family: var(--display);
+  font-weight: 500;
   font-size: 11px;
   line-height: 1.6;
   color: #737d68;
   margin-top: 13px;
+  padding-bottom: 24px;
+}
+.screen-menu .menu-panel {
+  /* The roster is absolutely positioned, so padding alone cannot move it away. */
+  transform: translateY(-24px);
 }
 .showcase-panel {
   position: absolute;
@@ -535,6 +537,8 @@ button:disabled {
   color: #d0d6c4;
 }
 .fighter-name p {
+  font-family: var(--display);
+  font-weight: 500;
   font-size: 12px;
   color: #859276;
   margin-top: 9px;
@@ -735,6 +739,15 @@ button:disabled {
   color: #b4c3a0;
   min-width: 20px;
   text-align: center;
+}
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-shrink: 0;
+}
+.footer-links a {
+  text-decoration: none;
 }
 .help-button {
   font: 9px var(--mono);

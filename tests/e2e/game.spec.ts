@@ -236,3 +236,49 @@ test('losses require rematches in both opening rounds and wins preserve finalist
   await expect(page.getByRole('button', { name: 'Pause fight' })).toBeVisible();
   await expect(page.locator('.player-hud')).toContainText('Dario');
 });
+
+test('championship cup stays in every champion’s glove during the lift', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(
+    page.getByRole('button', { name: '01 START GAME' }),
+  ).toBeVisible();
+  for (const id of [
+    'elon_musk',
+    'mark_zuckerberg',
+    'dario_amodei',
+    'sam_altman',
+  ]) {
+    await page.evaluate((id) => {
+      const game = (window as any).__pitTest;
+      game.selected = id;
+      game.setMode('trophy');
+    }, id);
+    for (const delay of [150, 1100, 2100]) {
+      await page.waitForTimeout(delay);
+      const held = await page.evaluate(() => {
+        const game = (window as any).__pitTest;
+        const hand = game.views[0].entries.skeletons
+          .flatMap((s: any) => s.bones)
+          .find((b: any) => b.name.endsWith('hand.R'))
+          .getTransformNode();
+        const V = hand.position.constructor;
+        const handle = V.TransformCoordinates(
+          new V(0.43, 0.53, 0),
+          game.trophy.getWorldMatrix(),
+        );
+        return {
+          distance: V.Distance(handle, hand.getAbsolutePosition()),
+          height: game.trophy.position.y,
+          cup: game.trophy
+            .getChildMeshes()
+            .some((m: any) => m.name === 'Hollow spun gold cup'),
+        };
+      });
+      expect(held.distance).toBeLessThan(0.015);
+      expect(held.height).toBeGreaterThan(0.4);
+      expect(held.cup).toBe(true);
+    }
+  }
+});

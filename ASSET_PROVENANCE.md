@@ -17,3 +17,5 @@ Original synthetic audio was created with `scripts/build_audio.py`. It contains 
 Arm geometry uses a single curved shoulder-to-wrist surface without spherical joint caps. The wrist cuffs follow the forearm direction. The neck is shortened by 3.5 model centimeters with the same mapping applied to the mesh and skeleton. Each waistband and the upper shorts use the shared `torso_section` profile and that fighter's width, keeping the waist aligned with the abdomen.
 
 This is a fictional satirical depiction. No affiliation or endorsement is implied. Commercial likeness review is not part of this implementation.
+
+The championship cup is procedural Babylon geometry in `src/engine/ChampionshipTrophy.ts`: a hollow lathed gold bowl, curved tube handles, stone foot, engraved brass plaque and original studio reflection map. The ceremony follows the champion’s right-hand grip throughout the existing lift animation.

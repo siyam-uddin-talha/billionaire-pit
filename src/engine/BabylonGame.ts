@@ -43,6 +43,7 @@ import {
 import { InputManager } from '../game/InputManager';
 import { HavokPhysicsWorld } from './HavokPhysicsWorld';
 import { BabylonAudioManager } from './BabylonAudioManager';
+import { createChampionshipTrophy, trophyGrip } from './ChampionshipTrophy';
 
 let havokPromise: ReturnType<typeof HavokPhysics> | null = null;
 export type ViewMode =
@@ -106,6 +107,7 @@ export class BabylonGame {
       1 / Math.min(window.devicePixelRatio || 1, 2),
     );
     this.scene = new Scene(this.engine);
+    this.scene.onBeforeRenderObservable.add(() => this.updateTrophyGrip());
     this.scene.clearColor = new Color4(0.035, 0.043, 0.039, 0);
     this.scene.ambientColor = new Color3(0.35, 0.36, 0.33);
     this.camera = new ArcRotateCamera(
@@ -174,7 +176,7 @@ export class BabylonGame {
     this.scene.physicsEnabled = false;
     this.physics = new HavokPhysicsWorld(this.scene, plugin);
     progress(20);
-    const names = [...fighters.map((f) => f.id), 'arena', 'trophy'];
+    const names = [...fighters.map((f) => f.id), 'arena'];
     let loaded = 0;
     await Promise.all(
       names.map(async (name) => {
@@ -481,13 +483,16 @@ export class BabylonGame {
     this.arena?.setEnabled(false);
     this.platform.setEnabled(true);
     if (!this.trophy) {
-      const entries = this.containers.get('trophy')!.instantiateModelsToScene();
-      this.trophy = new TransformNode('championship trophy', this.scene);
-      entries.rootNodes.forEach((n) => (n.parent = this.trophy));
-      this.trophy.scaling.setAll(0.48);
+      this.trophy = createChampionshipTrophy(this.scene);
+      this.trophy.scaling.setAll(0.72);
+      this.trophy
+        .getChildMeshes()
+        .forEach((mesh) => this.shadow.addShadowCaster(mesh));
     }
     this.trophy.setEnabled(true);
-    this.trophy.position.set(0, 2.05, 0.05);
+    const lift = this.views[0].clips.get('trophy_lift');
+    if (lift) lift.speedRatio = 0.65;
+    this.updateTrophyGrip();
     this.camera.alpha = Math.PI / 2;
     this.camera.beta = 1.4;
     this.camera.radius = 5.5;
@@ -495,6 +500,26 @@ export class BabylonGame {
     this.audio?.play('trophy');
     this.audio?.play('cheer');
     this.burst(new Vector3(0, 2.7, 0), true);
+  }
+  private updateTrophyGrip() {
+    if (this.mode !== 'trophy' || !this.trophy || !this.views[0]) return;
+    const view = this.views[0];
+    const hand = view.entries.skeletons
+      .flatMap((s) => s.bones)
+      .find((b) => b.name.endsWith('hand.R'))
+      ?.getTransformNode();
+    if (!hand) return;
+    hand.computeWorldMatrix(true);
+    // The handle stays in the glove throughout the lift and final held pose.
+    const grip = hand.getAbsolutePosition();
+    this.trophy.rotation.z = -0.08;
+    this.trophy.computeWorldMatrix(true);
+    const offset = Vector3.TransformNormal(
+      trophyGrip,
+      this.trophy.getWorldMatrix(),
+    );
+    this.trophy.position.copyFrom(grip.subtract(offset));
+    this.trophy.computeWorldMatrix(true);
   }
   private syncViews() {
     if (!this.combat) return;

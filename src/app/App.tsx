@@ -958,17 +958,6 @@ export default function App() {
             >
               <CircleHelp size={15} /> HOW TO PLAY
             </button>
-            <a
-              className="help-button"
-              href="https://www.upwork.com/freelancers/siyamuddintalha"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => {
-                if (screen === 'fight') send('paused');
-              }}
-            >
-              FIND ME <ArrowUpRight size={15} />
-            </a>
           </div>
         </footer>
       </div>

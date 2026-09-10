@@ -51,7 +51,7 @@ export class InputManager {
     const c = {
       moveX:
         Number(has('KeyD', 'ArrowRight')) - Number(has('KeyA', 'ArrowLeft')),
-      moveZ: Number(has('KeyS', 'ArrowDown')) - Number(has('KeyW', 'ArrowUp')),
+      moveZ: Number(has('KeyW', 'ArrowUp')) - Number(has('KeyS', 'ArrowDown')),
       punchPressed: this.pressed.has('KeyJ'),
       kickPressed: this.pressed.has('KeyK'),
       blockHeld: has('KeyL'),

@@ -456,7 +456,7 @@ export class BabylonGame {
     this.particles.color1 = new Color4(tint.r, tint.g, tint.b, 1);
     this.particles.color2 =
       round > 0 ? new Color4(0.3, 0.85, 1, 1) : new Color4(1, 0.8, 0.2, 1);
-    this.camera.alpha = Math.PI / 2;
+    this.camera.alpha = -Math.PI / 2;
     this.camera.beta = 1.37;
     this.camera.radius = 10.8;
     this.camera.target.set(0, 0.8, 0);
@@ -502,7 +502,7 @@ export class BabylonGame {
       const v = this.views[i];
       if (!v) return;
       v.root.position.set(f.x, 0, f.z);
-      v.root.rotation.y = f.facing * (Math.PI / 2 - 0.18);
+      v.root.rotation.y = f.facing * (Math.PI / 2 + 0.18);
       this.animate(v, f.action);
     });
   }

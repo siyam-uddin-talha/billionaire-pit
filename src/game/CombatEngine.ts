@@ -292,6 +292,11 @@ export class CombatEngine {
           f.z -= (dot - 3.65) * Math.sin(n);
         }
       }
+    // Keep the player and CPU in their screen-side lanes, even when circling.
+    a.x = Math.min(a.x, -0.34);
+    b.x = Math.max(b.x, 0.34);
+    a.facing = 1;
+    b.facing = -1;
     this.physics?.sync(this.fighters);
     this.physics?.step(dt);
     this.resolve(0, 1);

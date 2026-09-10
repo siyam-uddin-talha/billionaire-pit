@@ -36,6 +36,18 @@ test('loading, roster, settings persistence, eligibility, controls and pause', a
   );
   await expect(page.locator('.cpu-hud .hud-name')).toContainText('Elon Musk');
   await expect(page.getByRole('button', { name: 'Pause fight' })).toBeVisible();
+  const screenSides = await page.evaluate(() => {
+    const game = (window as any).__pitTest;
+    return game.views.map(
+      (view: any) =>
+        view.root.position.constructor.TransformCoordinates(
+          view.root.position,
+          game.camera.getViewMatrix(),
+        ).x,
+    );
+  });
+  expect(screenSides[0]).toBeLessThan(0);
+  expect(screenSides[1]).toBeGreaterThan(0);
   await page.keyboard.down('KeyD');
   await page.waitForTimeout(280);
   await page.keyboard.up('KeyD');

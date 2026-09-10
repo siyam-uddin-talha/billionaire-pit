@@ -18,7 +18,7 @@ Open the URL printed by Vite. Minimum supported viewport: 768 × 600. No account
 - Hold L: block. Space: dodge. Escape: pause.
 - Touch-capable tablets have a movement pad and simultaneous action buttons.
 
-Win by knockout or more health after 60 seconds. Equal health starts a 15-second sudden-death period. Win Money (Elon Musk vs Mark Zuckerberg), AI (Dario Amodei vs Sam Altman), then Final Convergence (Dario vs Elon). Choose either eligible fighter in each round. Normal results depend on play; canonical outcomes are optional narrative configuration in `src/data/rounds.ts`.
+Win by knockout or more health after 60 seconds. Equal health starts a 15-second sudden-death period. Win Money (Elon Musk vs Mark Zuckerberg), AI (Dario Amodei vs Sam Altman), then Final Convergence between the actual winners of those rounds. Each opening-round winner advances even when the CPU wins, and checkpoints retain both finalists. Choose either eligible fighter in each round. Normal results depend on play; canonical outcomes are optional narrative configuration in `src/data/rounds.ts`.
 
 ## Structure
 
@@ -30,7 +30,7 @@ Win by knockout or more health after 60 seconds. Equal health starts a 15-second
 - `scripts/build_head.py`: per-person head contours, facial landmarks, closed scalp/jaw geometry, shaped ears, and texture/skin alignment. `scripts/render_head_qa.py` checks closed geometry, weights and UVs, then renders three angles of every head.
 - `scripts/build_upper_body.py`: welded chest, neck, shoulder and arm geometry with anatomical relief and blended joint weights.
 - `scripts/build_lower_body.py`: continuous tapered legs, blended knee/ankle weights, and fitted shorts. Mesh, skeleton and attack targets share an adult-proportion mapping with longer legs and reduced head/hand/shoulder bulk.
-- `scripts/build_audio.py`: original synthetic sound design. No third-party voice recordings or likeness assets are used.
+- `scripts/build_audio.py`: original synthetic sound design: short arcade-style impact, guard, movement and round cues; no looping background audio. No third-party voice recordings are used.
 
 React sends commands to the engine. Combat runs at 60 Hz with bounded catch-up. Havok steps exactly once per simulation step; trigger membership controls hit detection. A pure rules fallback supports simulation tests. CPU decisions use delayed visible-world snapshots, never input events. All four fighters use the same rig and runtime class. Loaded asset containers, instances, sounds and bodies are disposed on teardown; particle allocation is bounded.
 
@@ -46,7 +46,7 @@ Playwright defaults to the installed macOS Chrome application; set `PLAYWRIGHT_C
 
 ## Asset provenance and limits
 
-Fighters are original, stylized caricatures authored programmatically in Blender, approximately 55k triangles each. Each closed head is fitted to its own generated likeness, with facial relief aligned to the nose and eyes, a connected scalp and jaw, and shaped ears. The unchanged atlas supplies the facial detail, scalp colors and matching body skin tone. These fictional likenesses use approximate side geometry derived from frontal references. Punches and kicks use Blender joint targets, torso rotation, strike extension, and recovery. The arena and trophy are Blender GLBs. Included audio is synthesized, including abstract crowd texture rather than recorded spectators or spoken announcer lines. Fonts use Google Fonts with system fallbacks.
+Fighters are original, stylized caricatures authored programmatically in Blender, approximately 55k triangles each. Each closed head is fitted to its own generated likeness, with facial relief aligned to the nose and eyes, a connected scalp and jaw, and shaped ears. The unchanged atlas supplies the facial detail, scalp colors and matching body skin tone. These fictional likenesses use approximate side geometry derived from frontal references. Punches and kicks use Blender joint targets, torso rotation, strike extension, and recovery. The arena and trophy are Blender GLBs. Included audio is synthesized, using short effects rather than continuous background loops or spoken announcer lines. Fonts use Google Fonts with system fallbacks.
 
 The implementation is playable and tested locally. A broad cross-browser/device performance certification, final character art/animation polish, recorded voice/crowd production, and the blueprint's commercial-release legal review remain separate release work. Fictional and satirical; no affiliation or endorsement is implied.
 

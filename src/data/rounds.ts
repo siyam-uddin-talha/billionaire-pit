@@ -35,8 +35,21 @@ export const gameRules = {
   startingStamina: 100,
   checkpointTiming: 'between-rounds',
 };
-export function opponentFor(round: number, player: FighterId) {
-  const pair = rounds[round]?.pair;
+export function roundPair(
+  round: number,
+  winners: FighterId[] = [],
+): [FighterId, FighterId] {
+  if (round === 2)
+    return [winners[1] ?? 'dario_amodei', winners[0] ?? 'elon_musk'];
+  return rounds[round].pair;
+}
+export function opponentFor(
+  round: number,
+  player: FighterId,
+  winners: FighterId[] = [],
+) {
+  const pair =
+    round >= 0 && round < rounds.length ? roundPair(round, winners) : undefined;
   if (!pair?.includes(player))
     throw new Error('Fighter is not eligible for this round');
   return pair.find((id) => id !== player)!;

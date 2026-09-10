@@ -168,3 +168,41 @@ test('winning all three rounds checkpoints the next round and reaches the trophy
     page.getByRole('button', { name: 'Select Elon Musk', exact: true }),
   ).toBeVisible();
 });
+
+test('CPU winners of both opening rounds advance and survive reload', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '01 START GAME' }).click();
+  await page
+    .getByRole('button', { name: 'Select Mark Zuckerberg', exact: true })
+    .click();
+  for (const winner of [1, 1]) {
+    await page.getByRole('button', { name: 'CONFIRM FIGHTER' }).click();
+    await expect(
+      page.getByRole('button', { name: 'Pause fight' }),
+    ).toBeVisible();
+    await page.evaluate((side) => {
+      const game = (window as any).__pitTest;
+      game.combat.finish(side, 'K.O.');
+      game.onSnapshot(game.combat.snapshot());
+      game.onResult(game.combat.snapshot());
+    }, winner);
+    await page.getByRole('button', { name: 'NEXT ROUND' }).click();
+  }
+  await expect(page.locator('.matchup-card')).toContainText('Sam Altman');
+  await expect(page.locator('.matchup-card')).toContainText('Elon Musk');
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem('billionaire-pit-save')!).winners,
+    ),
+  ).toEqual(['elon_musk', 'sam_altman']);
+  await page.reload();
+  await page.getByRole('button', { name: /02 LOAD GAME/ }).click();
+  await expect(page.locator('.matchup-card')).toContainText('Sam Altman');
+  await expect(page.locator('.matchup-card')).toContainText('Elon Musk');
+  await expect(page.locator('.fighter-skills')).toHaveCount(0);
+  await page.getByRole('button', { name: 'CONFIRM FIGHTER' }).click();
+  await expect(page.getByRole('button', { name: 'Pause fight' })).toBeVisible();
+  await expect(page.locator('.player-hud')).toContainText('Sam');
+});

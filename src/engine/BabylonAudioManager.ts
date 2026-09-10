@@ -10,9 +10,7 @@ export type SoundName =
   | 'block'
   | 'whoosh'
   | 'ko'
-  | 'crowd'
   | 'cheer'
-  | 'music'
   | 'trophy';
 export class BabylonAudioManager {
   readonly ready: Promise<void>;
@@ -34,9 +32,7 @@ export class BabylonAudioManager {
           'block',
           'whoosh',
           'ko',
-          'crowd',
           'cheer',
-          'music',
           'trophy',
         ] as SoundName[]
       ).map(async (n) => {
@@ -66,9 +62,9 @@ export class BabylonAudioManager {
                 resolve();
               },
               {
-                loop: n === 'music' || n === 'crowd',
+                loop: false,
                 autoplay: false,
-                volume: n === 'music' ? 0.34 : n === 'crowd' ? 0.42 : 0.65,
+                volume: n === 'whoosh' ? 0.35 : n === 'cheer' ? 0.25 : 0.55,
               },
             );
             this.sounds.set(n, sound);
@@ -88,7 +84,6 @@ export class BabylonAudioManager {
       Engine.audioEngine?.unlock();
       this.unlocked = true;
     }
-    this.ambience();
   }
   setEnabled(enabled: boolean) {
     this.enabled = enabled;
@@ -98,18 +93,13 @@ export class BabylonAudioManager {
   setSuspended(suspended: boolean) {
     this.suspended = suspended;
     if (suspended) this.sounds.forEach((s) => s.pause());
-    else this.ambience();
-  }
-  private ambience() {
-    if (this.enabled && this.unlocked && !this.suspended)
-      for (const n of ['music', 'crowd'] as SoundName[]) {
-        const s = this.sounds.get(n);
-        if (s && !s.isPlaying) s.play();
-      }
   }
   play(n: SoundName) {
-    if (this.enabled && this.unlocked && !this.suspended)
+    if (this.enabled && this.unlocked && !this.suspended) {
+      if (['impact', 'heavy', 'block', 'whoosh'].includes(n))
+        this.sounds.get(n)?.setPlaybackRate(0.95 + Math.random() * 0.1);
       this.sounds.get(n)?.play();
+    }
   }
   dispose() {
     this.disposed = true;

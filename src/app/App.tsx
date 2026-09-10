@@ -40,7 +40,7 @@ import {
   type FighterId,
   type FighterDefinition,
 } from '../data/fighters';
-import { opponentFor, rounds } from '../data/rounds';
+import { opponentFor, rounds, roundPair } from '../data/rounds';
 import {
   loadSave,
   saveCheckpoint,
@@ -61,34 +61,6 @@ const controls = [
   ['SPACE', 'DODGE'],
   ['ESC', 'PAUSE'],
 ];
-function Skill({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number;
-  color?: string;
-}) {
-  return (
-    <div className="skill">
-      <span>{label}</span>
-      <div className="skill-bars" aria-label={`${label}: ${value} out of 4`}>
-        {[1, 2, 3, 4].map((v) => (
-          <i
-            key={v}
-            className={v <= value ? 'filled' : ''}
-            style={v <= value ? { background: color } : undefined}
-          />
-        ))}
-      </div>
-      <span className="skill-plus">
-        {'+'.repeat(value)}
-        <span className="empty-plus">{'+'.repeat(4 - value)}</span>
-      </span>
-    </div>
-  );
-}
 function Brand({ small = false }: { small?: boolean }) {
   return (
     <div className={`brand ${small ? 'small' : ''}`}>
@@ -168,6 +140,8 @@ export default function App() {
   const [screen, send] = useReducer(screenReducer, 'loading');
   const [selected, setSelected] = useState<FighterId>('elon_musk');
   const [round, setRound] = useState(0);
+  const [winners, setWinners] = useState<FighterId[]>([]);
+  const pair = roundPair(round, winners);
   const [progress, setProgress] = useState(0);
   const [settings, setSettings] = useState(false);
   const [howTo, setHowTo] = useState(false);
@@ -191,7 +165,7 @@ export default function App() {
   const fighter = fighterById(selected);
   const eligible =
     screen === 'select'
-      ? fighters.filter((f) => rounds[round].pair.includes(f.id))
+      ? fighters.filter((f) => roundPair(round, winners).includes(f.id))
       : fighters;
   const isArena = ['intro', 'fight', 'paused', 'result'].includes(screen);
   const isShowcase = screen === 'menu' || screen === 'select';
@@ -288,22 +262,33 @@ export default function App() {
     return () => clearInterval(t);
   }, [screen]);
   useEffect(() => {
-    if (screen === 'result' && snapshot?.winner === 0 && round < 2) {
+    if (
+      screen === 'result' &&
+      (snapshot?.winner === 0 || snapshot?.winner === 1) &&
+      round < 2
+    ) {
       const next = round + 1;
-      setStorageNotice(!saveCheckpoint(next, rounds[next].pair[0]));
+      const winner =
+        snapshot.winner === 0
+          ? selected
+          : opponentFor(round, selected, winners);
+      const advanced = [...winners.slice(0, round), winner];
+      setStorageNotice(
+        !saveCheckpoint(next, roundPair(next, advanced)[0], advanced),
+      );
       setCheckpoint(loadSave());
     }
     if (screen === 'trophy') {
       clearSave();
       setCheckpoint(null);
     }
-  }, [screen, snapshot?.winner, round]);
+  }, [screen, snapshot?.winner, round, selected, winners]);
   const changeFighter = useCallback(
     (direction: number) => {
       if (!isShowcase) return;
       const list =
         screen === 'select'
-          ? fighters.filter((f) => rounds[round].pair.includes(f.id))
+          ? fighters.filter((f) => roundPair(round, winners).includes(f.id))
           : fighters;
       setSelected(
         list[
@@ -313,21 +298,22 @@ export default function App() {
       );
       game.current?.audio?.play('ui');
     },
-    [isShowcase, screen, round, selected],
+    [isShowcase, screen, round, selected, winners],
   );
   const confirm = useCallback(() => {
     game.current?.audio?.unlock();
     game.current?.audio?.play('ui');
     if (pendingSave.current) {
-      setStorageNotice(!saveCheckpoint(round, selected));
+      setStorageNotice(!saveCheckpoint(round, selected, winners));
       setCheckpoint(loadSave());
       pendingSave.current = false;
     }
-    game.current?.startRound(round, selected);
+    game.current?.startRound(round, selected, winners);
     send('intro');
-  }, [round, selected]);
+  }, [round, selected, winners]);
   const start = useCallback(() => {
     setRound(0);
+    setWinners([]);
     setSelected('elon_musk');
     pendingSave.current = true;
     game.current?.audio?.unlock();
@@ -387,6 +373,10 @@ export default function App() {
     setCheckpoint(save);
     if (!save) return;
     setRound(save.round);
+    setWinners(
+      save.winners ??
+        (['elon_musk', 'dario_amodei'].slice(0, save.round) as FighterId[]),
+    );
     setSelected(save.fighter);
     pendingSave.current = false;
     game.current?.audio?.unlock();
@@ -398,15 +388,21 @@ export default function App() {
       return;
     }
     const n = round + 1;
+    const winner =
+      snapshot?.winner === 0 ? selected : opponentFor(round, selected, winners);
+    const advanced = [...winners.slice(0, round), winner];
+    setWinners(advanced);
     setRound(n);
-    setSelected(rounds[n].pair[0]);
+    setSelected(roundPair(n, advanced)[0]);
     send('select');
   }
   function rematch() {
-    game.current?.startRound(round, selected);
+    game.current?.startRound(round, selected, winners);
     send('intro');
   }
-  const opp = isArena ? fighterById(opponentFor(round, selected)) : null;
+  const opp = isArena
+    ? fighterById(opponentFor(round, selected, winners))
+    : null;
   return (
     <main
       className={`game-shell screen-${screen}`}
@@ -610,9 +606,9 @@ export default function App() {
                     <div className="matchup-card">
                       <span>TONIGHT’S MATCHUP</span>
                       <p>
-                        {fighterById(rounds[round].pair[0]).name}
+                        {fighterById(pair[0]).name}
                         <b>VS</b>
-                        {fighterById(rounds[round].pair[1]).name}
+                        {fighterById(pair[1]).name}
                       </p>
                     </div>
                     <button className="primary-button" onClick={confirm}>
@@ -688,18 +684,6 @@ export default function App() {
                       {fighter.first} <span>{fighter.last}</span>
                     </h2>
                     <p>{fighter.quote}</p>
-                  </div>
-                  <div className="fighter-skills">
-                    <Skill
-                      label="MONEY"
-                      value={fighter.money}
-                      color={fighter.accent}
-                    />
-                    <Skill
-                      label="AI"
-                      value={fighter.ai}
-                      color={fighter.accent}
-                    />
                   </div>
                 </div>
               </section>
@@ -878,23 +862,27 @@ export default function App() {
                     </span>
                   </div>
                   <p>
-                    {snapshot.winner === 0
-                      ? round === 2
-                        ? 'The pit has a new champion.'
-                        : 'One step closer to the crown.'
-                      : 'Every empire takes a hit. Go again.'}
+                    {round < 2
+                      ? `${snapshot.winner === 0 ? fighter.name : opp.name} advances to the final.`
+                      : snapshot.winner === 0
+                        ? round === 2
+                          ? 'The pit has a new champion.'
+                          : 'One step closer to the crown.'
+                        : 'Every empire takes a hit. Go again.'}
                   </p>
                   <div className="result-actions">
                     <button
                       className="primary-button"
-                      onClick={snapshot.winner === 0 ? next : rematch}
+                      onClick={
+                        snapshot.winner === 0 || round < 2 ? next : rematch
+                      }
                     >
-                      {snapshot.winner === 0
+                      {snapshot.winner === 0 || round < 2
                         ? round === 2
                           ? 'CLAIM THE TROPHY'
                           : 'NEXT ROUND'
                         : 'REMATCH'}
-                      {snapshot.winner === 0 ? (
+                      {snapshot.winner === 0 || round < 2 ? (
                         <ArrowRight size={20} />
                       ) : (
                         <RotateCcw size={20} />

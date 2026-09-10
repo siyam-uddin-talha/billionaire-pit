@@ -1,4 +1,4 @@
-import { rounds } from '../data/rounds';
+import { rounds, roundPair } from '../data/rounds';
 import type { FighterId } from '../data/fighters';
 export const SAVE_KEY = 'billionaire-pit-save';
 export const SETTINGS_KEY = 'billionaire-pit-settings';
@@ -7,16 +7,24 @@ export interface Checkpoint {
   round: number;
   fighter: FighterId;
   savedAt: string;
+  winners?: FighterId[];
 }
 export function validateSave(value: unknown): Checkpoint | null {
   if (!value || typeof value !== 'object') return null;
   const s = value as Partial<Checkpoint>;
   if (
+    s.winners !== undefined &&
+    (!Array.isArray(s.winners) ||
+      s.winners.length !== s.round ||
+      s.winners.some((id, i) => !rounds[i]?.pair.includes(id)))
+  )
+    return null;
+  if (
     s.version !== 1 ||
     !Number.isInteger(s.round) ||
     s.round! < 0 ||
     s.round! > 2 ||
-    !rounds[s.round!].pair.includes(s.fighter!) ||
+    !roundPair(s.round!, s.winners).includes(s.fighter!) ||
     typeof s.savedAt !== 'string' ||
     !Number.isFinite(Date.parse(s.savedAt))
   )
@@ -30,7 +38,14 @@ export function loadSave(): Checkpoint | null {
     return null;
   }
 }
-export function saveCheckpoint(round: number, fighter: FighterId): boolean {
+export function saveCheckpoint(
+  round: number,
+  fighter: FighterId,
+  winners: FighterId[] = (['elon_musk', 'dario_amodei'] as FighterId[]).slice(
+    0,
+    round,
+  ),
+): boolean {
   try {
     localStorage.setItem(
       SAVE_KEY,
@@ -39,6 +54,7 @@ export function saveCheckpoint(round: number, fighter: FighterId): boolean {
         round,
         fighter,
         savedAt: new Date().toISOString(),
+        winners,
       }),
     );
     return true;

@@ -1,24 +1,42 @@
-"""Generate original synthetic sound design. All playback is owned by Babylon Sound."""
-import math, random, wave, struct, os
-random.seed(2026); os.makedirs('public/audio',exist_ok=True);SR=22050
-
-def write(name,seconds,fn):
-    with wave.open('public/audio/'+name+'.wav','wb') as f:
-        f.setparams((1,2,SR,0,'NONE','not compressed'));f.writeframes(b''.join(struct.pack('<h',int(max(-1,min(1,fn(i/SR)))*26000)) for i in range(int(seconds*SR))))
-write('ui',.11,lambda t:math.sin(2*math.pi*(700-1000*t)*t)*math.exp(-35*t)*.2)
-write('beep',.2,lambda t:math.sin(2*math.pi*600*t)*math.exp(-12*t)*.3)
-write('impact',.24,lambda t:(random.uniform(-1,1)*.45+math.sin(2*math.pi*(100-160*t)*t)*.7)*math.exp(-23*t))
-write('heavy',.55,lambda t:(random.uniform(-1,1)*.5+math.sin(2*math.pi*(70-70*t)*t)*.7)*math.exp(-13*t))
-write('block',.22,lambda t:(math.sin(2*math.pi*440*t)+math.sin(2*math.pi*687*t)+random.uniform(-1,1)*.5)*math.exp(-24*t)*.3)
-write('whoosh',.28,lambda t:random.uniform(-1,1)*math.sin(math.pi*t/.28)**2*.22)
-write('ko',1.2,lambda t:(math.sin(2*math.pi*(60-25*t)*t)*.65+random.uniform(-1,1)*.25)*math.exp(-5*t))
-write('crowd',6,lambda t:random.uniform(-1,1)*(.025+.025*math.sin(t*3)**2)+math.sin(2*math.pi*150*t)*.01)
-write('cheer',3.5,lambda t:(random.uniform(-1,1)*.28+math.sin(2*math.pi*320*t+math.sin(t*9)*8)*.055)*math.sin(math.pi*t/3.5)**.6)
-notes=[55,55,65.406,49,55,55,73.416,65.406]
-def music(t):
-    beat=t%.5; n=notes[int(t/.5)%8]; bass=math.sin(2*math.pi*n*t)*math.exp(-beat*8)*.11
-    kick=math.sin(2*math.pi*(60-60*beat)*beat)*math.exp(-beat*30)*.18
-    hat=random.uniform(-1,1)*math.exp(-(t%.25)*100)*.04
-    return bass+kick+hat
-write('music',8,music)
-write('trophy',3.5,lambda t:sum(math.sin(2*math.pi*f*t)*.075 for f in [261.63,329.63,392,523.25])*min(t*5,1)*max(0,1-t/3.5))
+"""Original short arcade-fighting cues; no music or crowd loops."""
+import math, random, wave, struct
+from pathlib import Path
+random.seed(2026)
+SR = 22050
+out = Path('public/audio')
+out.mkdir(exist_ok=True)
+def write(name, duration, fn):
+    samples=[]
+    for i in range(int(duration*SR)):
+        t=i/SR
+        fade=min(1,t/.0015,(duration-t)/.015)
+        samples.append(struct.pack('<h', round(max(-.9,min(.9,fn(t)*fade))*26000)))
+    with wave.open(str(out/(name+'.wav')),'wb') as f:
+        f.setparams((1,2,SR,0,'NONE','not compressed'))
+        f.writeframes(b''.join(samples))
+def hit(t, heavy=False):
+    # Dry body contact, brief midrange crack, no sustained sub-bass.
+    decay=32 if heavy else 48
+    body=math.sin(2*math.pi*(125*t+.65*(1-math.exp(-60*t))))*.55*math.exp(-decay*t)
+    crack=random.uniform(-1,1)*.28*math.exp(-110*t)
+    return body+crack
+write('impact',.16,hit)
+write('heavy',.22,lambda t:hit(t,True))
+write('block',.13,lambda t:(math.sin(2*math.pi*230*t)*.26+random.uniform(-1,1)*.15)*math.exp(-55*t))
+wind=[0.0]
+def whoosh(t):
+    wind[0]=.75*wind[0]+.25*random.uniform(-1,1)
+    return wind[0]*math.sin(math.pi*t/.18)**2*.55
+write('whoosh',.18,whoosh)
+write('ui',.075,lambda t:math.sin(2*math.pi*520*t)*math.exp(-60*t)*.15)
+write('beep',.12,lambda t:math.sin(2*math.pi*660*t)*math.exp(-28*t)*.2)
+write('ko',.4,lambda t:hit(t,True)*.65+math.sin(2*math.pi*220*t)*math.exp(-12*t)*.14)
+def victory(t):
+    notes=[392,493.88,587.33,783.99]
+    n=notes[min(3,int(t/.12))]
+    local=t%.12 if t<.36 else t-.36
+    return math.sin(2*math.pi*n*local)*math.exp(-local*12)*.16
+write('trophy',.85,victory)
+write('cheer',.45,lambda t:sum(math.sin(2*math.pi*f*t) for f in (392,493.88,587.33))*.035*math.exp(-10*t))
+for name in ('music','crowd'):
+    (out/(name+'.wav')).unlink(missing_ok=True)

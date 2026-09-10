@@ -432,11 +432,11 @@ export class BabylonGame {
     this.camera.target.set(0, 1.1, 0);
     this.engine.resize();
   }
-  startRound(round: number, player: FighterId) {
+  startRound(round: number, player: FighterId, winners: FighterId[] = []) {
     this.input.clear();
     this.accumulator = 0;
     this.clearViews();
-    const cpu = opponentFor(round, player);
+    const cpu = opponentFor(round, player, winners);
     this.views = [this.fighter(player), this.fighter(cpu)];
     this.combat = new CombatEngine(
       player,
@@ -444,7 +444,9 @@ export class BabylonGame {
       Math.floor(Math.random() * 1e9),
       this.physics,
       undefined,
-      rounds[round].canonical,
+      [player, cpu].includes(rounds[round].canonical)
+        ? rounds[round].canonical
+        : player,
     );
     this.platform.setEnabled(false);
     this.arena?.setEnabled(true);

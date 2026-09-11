@@ -77,7 +77,7 @@ test('loading, roster, settings persistence, eligibility, controls and pause', a
   ).toBeEnabled();
   expect(errors).toEqual([]);
 });
-test('tablet fits its viewport and phones show the supported-size message', async ({
+test('tablet fits its viewport and phones scroll the minimum-width game', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 768, height: 600 });
@@ -92,8 +92,21 @@ test('tablet fits its viewport and phones show the supported-size message', asyn
   expect(metrics.w).toBe(768);
   expect(metrics.h).toBeLessThanOrEqual(601);
   await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.locator('.small-screen')).toHaveCount(0);
   await expect(
-    page.getByRole('heading', { name: 'A bigger stage is required.' }),
+    page.getByRole('button', { name: '01 START GAME' }),
+  ).toBeVisible();
+  const phone = await page.evaluate(() => ({
+    width: document.documentElement.scrollWidth,
+    shell: document.querySelector('.game-shell')!.getBoundingClientRect().width,
+  }));
+  expect(phone.width).toBeGreaterThanOrEqual(768);
+  expect(phone.shell).toBe(768);
+  await page.evaluate(() => window.scrollTo(300, 0));
+  expect(await page.evaluate(() => window.scrollX)).toBeGreaterThan(0);
+  await page.getByRole('button', { name: '01 START GAME' }).click();
+  await expect(
+    page.getByRole('button', { name: 'CONFIRM FIGHTER' }),
   ).toBeVisible();
 });
 test('valid round-two checkpoint resumes eligible fighters; corrupt save is ignored', async ({

@@ -24,7 +24,6 @@ import {
   Cpu,
   Shield,
   CircleHelp,
-  Monitor,
   Check,
 } from 'lucide-react';
 import {
@@ -402,15 +401,6 @@ export default function App() {
       className={`game-shell screen-${screen}`}
       style={{ '--fighter-accent': fighter.accent } as CSSProperties}
     >
-      <div className="small-screen">
-        <Monitor size={42} />
-        <Brand />
-        <h1>A bigger stage is required.</h1>
-        <p>
-          The pit is built for desktop and tablet. Open on a screen at least 768
-          pixels wide.
-        </p>
-      </div>
       <div className="desktop-game">
         <header className="topbar">
           <Brand small />

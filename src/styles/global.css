@@ -19,6 +19,7 @@
 }
 body {
   margin: 0;
+  overflow-x: auto;
 }
 button,
 a,
@@ -67,6 +68,7 @@ button:disabled {
   color: #10150a;
 }
 .game-shell {
+  min-width: 768px;
   min-height: 100svh;
   padding: 0 38px;
   overflow: hidden;
@@ -1416,9 +1418,6 @@ button:disabled {
   padding: 18px 24px;
   font-size: 14px;
 }
-.small-screen {
-  display: none;
-}
 .touch-controls {
   display: none;
 }
@@ -1961,36 +1960,16 @@ button:disabled {
   }
 }
 @media (max-width: 767px) {
-  .desktop-game {
-    display: none;
+  .scene-wrap,
+  .scene-wrap canvas,
+  .showcase-panel {
+    touch-action: pan-x pan-y;
   }
-  .game-shell {
-    min-height: 100svh;
-    display: grid;
-    place-items: center;
-    padding: 30px;
+  .game-title {
+    font-size: 64px;
   }
-  .small-screen {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    gap: 28px;
-    max-width: 360px;
-  }
-  .small-screen > svg {
-    color: var(--accent);
-  }
-  .small-screen h1 {
-    font: 700 37px/1 var(--display);
-  }
-  .small-screen p {
-    font-size: 15px;
-    line-height: 1.65;
-    color: #99aa87;
-  }
-  .small-screen .brand {
-    margin-bottom: 8px;
+  .select-title {
+    font-size: 48px;
   }
 }
 @media (prefers-reduced-motion: reduce) {

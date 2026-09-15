@@ -483,6 +483,7 @@ export class BabylonGame {
     this.syncViews();
     this.onSnapshot(this.combat.snapshot());
     this.engine.resize();
+    this.audio?.stopBg();
   }
   setMode(mode: ViewMode) {
     this.engine.resize();
@@ -490,6 +491,11 @@ export class BabylonGame {
     this.input.clear();
     this.accumulator = 0;
     this.audio?.setSuspended(mode === 'paused');
+    if (mode === 'menu' || mode === 'select') {
+      this.audio?.playBg();
+    } else {
+      this.audio?.stopBg();
+    }
     if (mode === 'fight') this.audio?.play('heavy');
     if (mode === 'result') this.syncViews();
     if (mode === 'trophy') this.ceremony();
